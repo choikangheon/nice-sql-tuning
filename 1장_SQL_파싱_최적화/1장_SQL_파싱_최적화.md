@@ -51,3 +51,48 @@ SQL 옵티마이저는 대부분 좋은 선택을 하지만, 완벽하지 않다
 
 ### SGA (System Global Area)
 > 서버 프로세스와 백그라운드 프로세스가 공통으로 액세스하는 데이터와 제어 구조를 캐싱하는 메모리 공간
+
+### 최적화 과정
+캐시에 o : 사용자 -> SQL 파싱 -> 캐시에 존재하면 바로 실행
+캐시에 x : 사용자 -> SQL 파싱 -> 최적화 -> 로우 소스 성생 -> 실행
+
+### 최적화 과정이 하드한 이유
+> 내비게이션의 예 : 서울에서 부산까지 모든 이동 경로와 소요 시간을 계산해야 하는데
+> 이것은 매우 무거운 작업이다.
+
+그래서 라이브러리 캐쉬가 필요
+
+## 바인드 변수의 중요성
+
+### 이름없는 SQL 문제
+
+  사용자 정의 함수/프로시저, 트리거, 패키지 등은 생성할 떄 부터 이름을 갖고, 컴파일한 상태로 딕셔너리에 저장되며
+사용자가 삭제하지 않는 한 영구적으로 보관된다. 실행할 때 라이브러리 캐시에 적재함으로써 여러 사용자가 공유
+
+### 그런데 SQL 는 아니다. 왜?
+
+  SQL은 이름이 따로 존재 하지 않고, 전체 SQL 텍스트가 이름 역할
+그 이유는 사용자 정의 함수/프로시저 등은 소스가 코드가 바뀌어도 이름이 바뀌지 않아 다른 객체 생성 x
+  하지만, SQL 같은 경우 저장하지 않는 이유가 SQL 전체 텍스트가 이름의 역할을 하기에
+수정되면 새로운 객체가 생겨나기 떄문이다.
+  
+
+### 공유 가능 SQL
+> SELECT * FROM review WHERE id = 7900;
+> SELECT * FROM REVIEW where ID = 7900;
+> 이 두개는 의미는 같지만, 실행할 때 각각 최적화를 진행하고 캐싱함
+
+매 요청마다 하나의 프로시저 생성 예시
+```
+String sql = "SELECT * FROM product WHERE id = '" + index + "'";
+Statement st = con.createStatement();
+ResultSet rs = st.executeQuery(sql);
+```
+
+매 요청마다 하나의 프로시저 생성 예시
+```
+String sql = "SELECT * FROM product WHERE id = ?";
+PreparedStatement st = con.preparedStatement(sql);
+st.setString(1,id);
+ResultSet rs = st.executeQuery(sql);
+```
